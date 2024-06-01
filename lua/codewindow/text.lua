@@ -1,8 +1,8 @@
 local M = {}
 
-local minimap_hl = require('codewindow.highlight')
-local minimap_err = require('codewindow.errors')
-local utils = require('codewindow.utils')
+local minimap_hl = require("codewindow.highlight")
+local minimap_err = require("codewindow.errors")
+local utils = require("codewindow.utils")
 
 local api = vim.api
 
@@ -17,7 +17,7 @@ local function coord_to_flag(x, y)
 end
 
 local function compress_text(lines)
-  local config = require('codewindow.config').get()
+  local config = require("codewindow.config").get()
   local scanned_text = {}
   for _ = 1, math.ceil(#lines / 4) do
     local line = {}
@@ -30,7 +30,6 @@ local function compress_text(lines)
   for y = 1, #lines do
     local current_line = lines[y]
     for x = 1, config.minimap_width * 2 do
-
       local any_printable = false
       for dx = 1, config.width_multiplier do
         local actual_x = (x - 1) * config.width_multiplier + (dx - 1) + 1
@@ -62,10 +61,12 @@ local function compress_text(lines)
 end
 
 function M.update_minimap(current_buffer, window)
-  if not api.nvim_buf_is_valid(current_buffer or -1) then return end
-  local config = require('codewindow.config').get()
+  if not api.nvim_buf_is_valid(current_buffer or -1) then
+    return
+  end
+  local config = require("codewindow.config").get()
 
-  api.nvim_buf_set_option(window.buffer, 'modifiable', true)
+  api.nvim_buf_set_option(window.buffer, "modifiable", true)
   local lines = api.nvim_buf_get_lines(current_buffer, 0, -1, true)
 
   local minimap_text = compress_text(lines)
@@ -83,14 +84,12 @@ function M.update_minimap(current_buffer, window)
 
   local git_text
   if config.use_git then
-    git_text = require('codewindow.git').parse_git_diff(lines)
+    git_text = require("codewindow.git").parse_git_diff(lines)
   else
     git_text = {}
   end
   for i = 1, #minimap_text do
-    local line = (error_text[i] or placeholder_str)
-        .. minimap_text[i]
-        .. (git_text[i] or placeholder_str)
+    local line = (error_text[i] or placeholder_str) .. minimap_text[i] .. (git_text[i] or placeholder_str)
     text[i] = line
   end
 
@@ -104,7 +103,7 @@ function M.update_minimap(current_buffer, window)
   end
 
   minimap_hl.display_screen_bounds(window)
-  api.nvim_buf_set_option(window.buffer, 'modifiable', false)
+  api.nvim_buf_set_option(window.buffer, "modifiable", false)
 end
 
 return M
