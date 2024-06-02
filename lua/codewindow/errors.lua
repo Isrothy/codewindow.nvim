@@ -1,9 +1,9 @@
 local M = {}
 
-local utils = require("codewindow.utils")
-
 local diagnostic = vim.diagnostic
 
+---@param buffer integer
+---@return string[]
 function M.get_lsp_errors(buffer)
   local lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, true)
   local error_lines = {}
@@ -42,6 +42,7 @@ function M.get_lsp_errors(buffer)
       end
     end
 
+    local utils = require("codewindow.utils")
     local err_char = utils.flag_to_char(err_flag)
     local warn_char = utils.flag_to_char(warn_flag)
 

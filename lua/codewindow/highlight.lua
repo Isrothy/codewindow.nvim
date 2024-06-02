@@ -2,9 +2,13 @@ local M = {}
 
 local config = require("codewindow.config").get()
 
+---@type integer?
 local hl_namespace
+---@type integer?
 local screenbounds_namespace
+---@type integer?
 local diagnostic_namespace
+---@type integer?
 local cursor_namespace
 
 local api = vim.api
@@ -26,22 +30,27 @@ function M.setup()
   api.nvim_set_hl(0, "CodewindowBoundsBackground", { link = "CursorLine", default = true })
 end
 
+---@param buffer integer
 local function clear_hl_namespaces(buffer)
   api.nvim_buf_clear_namespace(buffer, hl_namespace, 0, -1)
   api.nvim_buf_clear_namespace(buffer, screenbounds_namespace, 0, -1)
   api.nvim_buf_clear_namespace(buffer, diagnostic_namespace, 0, -1)
 end
 
-local function most_commons(highlight)
+---The most common elements in the given table
+---@generic T
+---@param tbl table<T,integer>
+---@return T[]
+local function most_commons(tbl)
   local max = 0
-  for _, count in pairs(highlight) do
+  for _, count in pairs(tbl) do
     if count > max then
       max = count
     end
   end
 
   local result = {}
-  for entry, count in pairs(highlight) do
+  for entry, count in pairs(tbl) do
     if count == max then
       table.insert(result, entry)
     end
@@ -50,16 +59,19 @@ local function most_commons(highlight)
   return result
 end
 
+---@param buffer integer
+---@param lines string[]
+---@return string[][][]?
 local function extract_highlighting(buffer, lines)
   if not api.nvim_buf_is_valid(buffer) then
-    return
+    return nil
   end
 
   local highlighter = require("vim.treesitter.highlighter")
   local buf_highlighter = highlighter.active[buffer]
 
   if buf_highlighter == nil then
-    return
+    return nil
   end
 
   local line_count = #lines
@@ -68,6 +80,7 @@ local function extract_highlighting(buffer, lines)
   local width_multiplier = config.width_multiplier
   local minimap_char_width = minimap_width * width_multiplier * 2
 
+  ---@type table<string,integer>[][]
   local highlights = {}
   for _ = 1, minimap_height do
     local line = {}
@@ -116,21 +129,27 @@ local function extract_highlighting(buffer, lines)
   return highlights
 end
 
-if config.use_treesitter then
-  M.extract_highlighting = extract_highlighting
-else
-  M.extract_highlighting = function() end
+---@type fun(buffer: integer, lines:string[]): string[][][]?
+M.extract_highlighting = config.use_treesitter and extract_highlighting or function()
+  return nil
 end
 
-local function contains_group(cell, group)
-  for i, v in ipairs(cell) do
-    if v == group then
+---The index of an item in a list
+---@param list any[]
+---@param item any
+---@return integer?
+local function index(list, item)
+  for i, v in ipairs(list) do
+    if v == item then
       return i
     end
   end
   return nil
 end
 
+---@param highlights string[][][]?
+---@param buffer integer
+---@param lines string[]
 function M.apply_highlight(highlights, buffer, lines)
   local minimap_height = math.ceil(#lines / 4)
   local minimap_width = config.minimap_width
@@ -144,7 +163,7 @@ function M.apply_highlight(highlights, buffer, lines)
           if group ~= "" then
             local end_x = x
             while end_x < minimap_width do
-              local pos = contains_group(highlights[y][end_x + 1], group)
+              local pos = index(highlights[y][end_x + 1], group)
               if not pos then
                 break
               end
@@ -182,6 +201,7 @@ function M.apply_highlight(highlights, buffer, lines)
   end
 end
 
+---@param window Window?
 function M.display_screen_bounds(window)
   if screenbounds_namespace == nil then
     return
@@ -248,6 +268,7 @@ function M.display_screen_bounds(window)
   end
 end
 
+---@param window Window?
 function M.display_cursor(window)
   if not config.show_cursor then
     return

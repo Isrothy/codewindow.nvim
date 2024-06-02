@@ -1,8 +1,9 @@
 local M = {}
 
-local utils = require("codewindow.utils")
 local fn = vim.fn
 
+---@param lines string[]
+---@return string[]
 function M.parse_git_diff(lines)
   local diff = fn.systemlist({ "git", "diff", "-U0", fn.expand("%") })
 
@@ -10,7 +11,9 @@ function M.parse_git_diff(lines)
     return {}
   end
 
+  ---@type boolean[]
   local removes = {}
+  ---@type boolean[]
   local adds = {}
   for i = 1, #lines do
     removes[i] = false
@@ -37,6 +40,7 @@ function M.parse_git_diff(lines)
     end
   end
 
+  ---@type string[]
   local git_lines = {}
   local minimap_height = math.ceil(#lines / 4)
   for y = 1, minimap_height do
@@ -52,6 +56,7 @@ function M.parse_git_diff(lines)
       end
     end
 
+    local utils = require("codewindow.utils")
     local a_chr = utils.flag_to_char(a_flag)
     local d_chr = utils.flag_to_char(d_flag)
 

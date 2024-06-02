@@ -6,16 +6,23 @@ local utils = require("codewindow.utils")
 
 local api = vim.api
 
+--- @param chr string
+--- @return boolean
 local function is_whitespace(chr)
   return chr == " " or chr == "\t" or chr == ""
 end
 
-local function coord_to_flag(x, y)
-  x = x - 1
-  y = y - 1
-  return math.pow(2, y % 4) * ((x % 2 == 0) and 1 or 16)
+--- @param col integer
+--- @param row integer
+--- @return integer
+local function coord_to_flag(col, row)
+  col = col - 1
+  row = row - 1
+  return math.pow(2, row % 4) * ((col % 2 == 0) and 1 or 16)
 end
 
+--- @param lines string[]
+--- @return string[]
 local function compress_text(lines)
   local config = require("codewindow.config").get()
   local scanned_text = {}
@@ -48,6 +55,7 @@ local function compress_text(lines)
     end
   end
 
+  ---@type string[]
   local minimap_text = {}
   for y = 1, #scanned_text do
     local line = ""
@@ -60,8 +68,9 @@ local function compress_text(lines)
   return minimap_text
 end
 
+---@param current_buffer integer?
 function M.update_minimap(current_buffer, window)
-  if not api.nvim_buf_is_valid(current_buffer or -1) then
+  if not current_buffer or not api.nvim_buf_is_valid(current_buffer) then
     return
   end
   local config = require("codewindow.config").get()
@@ -75,6 +84,7 @@ function M.update_minimap(current_buffer, window)
 
   local text = {}
 
+  ---@type (string[])?
   local error_text
   if config.use_lsp then
     error_text = minimap_err.get_lsp_errors(current_buffer)
@@ -82,6 +92,7 @@ function M.update_minimap(current_buffer, window)
     error_text = {}
   end
 
+  ---@type (string[])?
   local git_text
   if config.use_git then
     git_text = require("codewindow.git").parse_git_diff(lines)

@@ -3,6 +3,14 @@ local M = {}
 local utils = require("codewindow.utils")
 local minimap_txt = require("codewindow.text")
 local minimap_hl = require("codewindow.highlight")
+
+---@class Window
+---@field focused boolean
+---@field parent_win integer
+---@field window integer
+---@field buffer integer
+
+---@type Window?
 local window = nil
 
 local api = vim.api
@@ -65,13 +73,9 @@ function M.close_minimap()
   window = nil
 end
 
-local function get_window_height(current_window)
-  local window_height = vim.fn.winheight(current_window)
-  return window_height
-end
-
+---@param current_window integer
 local function get_window_config(current_window)
-  local minimap_height = get_window_height(current_window)
+  local minimap_height = vim.fn.winheight(current_window)
   local config = require("codewindow.config").get()
   if config.max_minimap_height then
     minimap_height = math.min(minimap_height, config.max_minimap_height)
@@ -114,6 +118,9 @@ local function get_window_config(current_window)
   }
 end
 
+---@param parent_buf integer
+---@param on_switch_window function
+---@param on_cursor_move function
 local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_move)
   augroup = api.nvim_create_augroup("CodewindowAugroup", {})
 
@@ -216,6 +223,7 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
   end
 end
 
+---@param current_window integer
 ---@return boolean
 local function should_ignore(current_window)
   local config = require("codewindow.config").get()
@@ -223,7 +231,6 @@ local function should_ignore(current_window)
   local bufnr = win_info[1].bufnr
 
   ---@type string
-  -- local buftype = api.nvim_buf_get_option(bufnr, "buftype")
   local buftype = api.nvim_get_option_value("buftype", { buf = bufnr })
   ---@type string
   local filetype = api.nvim_get_option_value("filetype", { buf = bufnr })
@@ -241,6 +248,10 @@ local function should_ignore(current_window)
   return false
 end
 
+---@param buffer integer
+---@param on_switch_window function
+---@param on_cursor_move function
+---@return Window?
 function M.create_window(buffer, on_switch_window, on_cursor_move)
   local current_window = api.nvim_get_current_win()
 
@@ -261,7 +272,7 @@ function M.create_window(buffer, on_switch_window, on_cursor_move)
     return nil
   end
 
-  local window_height = get_window_height(current_window)
+  local window_height = vim.fn.winheight(current_window)
   if window_height <= 2 then
     return nil
   end
@@ -302,6 +313,7 @@ function M.create_window(buffer, on_switch_window, on_cursor_move)
   return window
 end
 
+---@param value boolean
 function M.set_focused(value)
   if window == nil or window.focused == value then
     return
@@ -321,11 +333,13 @@ function M.toggle_focused()
   M.set_focused(not window.focused)
 end
 
+---@param amount integer
 function M.scroll_minimap(amount)
   scroll_parent_window(4 * amount)
   utils.scroll_window(window.window, amount)
 end
 
+---@param amount integer
 function M.scroll_minimap_by_page(amount)
   local window_height = api.nvim_win_get_height(window.parent_win)
   local actual_amount = math.floor(window_height * amount)
