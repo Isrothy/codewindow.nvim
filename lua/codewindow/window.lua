@@ -83,12 +83,28 @@ local function get_window_config(current_window)
   local col = is_relative and api.nvim_win_get_width(current_window) or vim.o.columns - 1
   local row = (not is_relative and vim.o.showtabline > 0) and 1 or 0
 
+  local height = (function()
+    local border = config.window_border
+    if type(border) == "string" then
+      return border == "none" and minimap_height or minimap_height - 2
+    else
+      local h = minimap_height
+      if border[2] ~= "" then
+        h = h - 1
+      end
+      if border[6] ~= "" then
+        h = h - 1
+      end
+      return h
+    end
+  end)()
+
   return {
     relative = relative,
     win = win,
     anchor = "NE",
     width = config.minimap_width + 4,
-    height = minimap_height - 2,
+    height = height,
     row = row,
     col = col,
     focusable = false,

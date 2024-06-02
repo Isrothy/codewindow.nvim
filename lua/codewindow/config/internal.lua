@@ -14,7 +14,7 @@ local M = {}
 ---@field z_index number
 ---@field show_cursor boolean
 ---@field screen_bounds Codewindow.ScreenBounds
----@field window_border string
+---@field window_border string | string[]
 ---@field relative Codewindow.Relative
 ---@field events (string[])
 
