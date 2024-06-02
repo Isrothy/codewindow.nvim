@@ -2,8 +2,6 @@ local M = {}
 
 local config = require("codewindow.config").get()
 local utils = require("codewindow.utils")
-local highlighter
-local ts_utils
 
 local hl_namespace
 local screenbounds_namespace
@@ -29,7 +27,7 @@ function M.setup()
   api.nvim_set_hl(0, "CodewindowBoundsBackground", { link = "CursorLine", default = true })
 end
 
-local function create_hl_namespaces(buffer)
+local function clear_hl_namespaces(buffer)
   api.nvim_buf_clear_namespace(buffer, hl_namespace, 0, -1)
   api.nvim_buf_clear_namespace(buffer, screenbounds_namespace, 0, -1)
   api.nvim_buf_clear_namespace(buffer, diagnostic_namespace, 0, -1)
@@ -58,6 +56,7 @@ local function extract_highlighting(buffer, lines)
     return
   end
 
+  local highlighter = require("vim.treesitter.highlighter")
   local buf_highlighter = highlighter.active[buffer]
 
   if buf_highlighter == nil then
@@ -79,6 +78,7 @@ local function extract_highlighting(buffer, lines)
     table.insert(highlights, line)
   end
 
+  local ts_utils = require("nvim-treesitter.ts_utils")
   buf_highlighter.tree:for_each_tree(function(tstree, tree)
     if not tstree then
       return
@@ -123,8 +123,6 @@ local function extract_highlighting(buffer, lines)
 end
 
 if config.use_treesitter then
-  highlighter = require("vim.treesitter.highlighter")
-  ts_utils = require("nvim-treesitter.ts_utils")
   M.extract_highlighting = extract_highlighting
 else
   M.extract_highlighting = function() end
@@ -143,7 +141,7 @@ function M.apply_highlight(highlights, buffer, lines)
   local minimap_height = math.ceil(#lines / 4)
   local minimap_width = config.minimap_width
 
-  create_hl_namespaces(buffer)
+  clear_hl_namespaces(buffer)
 
   if highlights ~= nil then
     for y = 1, minimap_height do

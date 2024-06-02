@@ -3,7 +3,6 @@ local M = {}
 local utils = require("codewindow.utils")
 local minimap_txt = require("codewindow.text")
 local minimap_hl = require("codewindow.highlight")
--- local config = require("codewindow.config").get()
 local window = nil
 
 local api = vim.api

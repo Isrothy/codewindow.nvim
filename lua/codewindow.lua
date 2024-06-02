@@ -1,13 +1,12 @@
 local M = {}
 
-local minimap_txt = require("codewindow.text")
-local minimap_win = require("codewindow.window")
-local minimap_hl = require("codewindow.highlight")
-
 local defer = vim.schedule
 local api = vim.api
 
 function M.open_minimap()
+  local minimap_txt = require("codewindow.text")
+  local minimap_win = require("codewindow.window")
+  local minimap_hl = require("codewindow.highlight")
   local current_buffer = api.nvim_get_current_buf()
   local window
   window = minimap_win.create_window(current_buffer, function()
@@ -26,18 +25,21 @@ function M.open_minimap()
 end
 
 function M.close_minimap()
+  local minimap_win = require("codewindow.window")
   if minimap_win.is_minimap_open() then
     minimap_win.close_minimap()
   end
 end
 
 function M.toggle_focus()
+  local minimap_win = require("codewindow.window")
   if minimap_win.is_minimap_open() then
     minimap_win.toggle_focused()
   end
 end
 
 function M.toggle_minimap()
+  local minimap_win = require("codewindow.window")
   if minimap_win.is_minimap_open() then
     M.close_minimap()
   else
@@ -53,6 +55,7 @@ function M.apply_default_keybinds()
 end
 
 function M.setup()
+  local minimap_hl = require("codewindow.highlight")
   minimap_hl.setup()
 
   api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
