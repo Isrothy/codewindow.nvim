@@ -1,7 +1,6 @@
 local M = {}
 
 local config = require("codewindow.config").get()
-local utils = require("codewindow.utils")
 
 local hl_namespace
 local screenbounds_namespace
@@ -79,6 +78,7 @@ local function extract_highlighting(buffer, lines)
   end
 
   local ts_utils = require("nvim-treesitter.ts_utils")
+  local utils = require("codewindow.utils")
   buf_highlighter.tree:for_each_tree(function(tstree, tree)
     if not tstree then
       return
@@ -111,7 +111,7 @@ local function extract_highlighting(buffer, lines)
         end
       end
     end
-  end, true)
+  end)
 
   for y = 1, minimap_height do
     for x = 1, minimap_width do
@@ -194,6 +194,7 @@ function M.display_screen_bounds(window)
   end
   api.nvim_buf_clear_namespace(window.buffer, screenbounds_namespace, 0, -1)
 
+  local utils = require("codewindow.utils")
   local topline = utils.get_top_line(window.parent_win)
   local botline = utils.get_bot_line(window.parent_win)
 
@@ -266,6 +267,7 @@ function M.display_cursor(window)
   end
   local cursor = api.nvim_win_get_cursor(window.parent_win)
 
+  local utils = require("codewindow.utils")
   local minimap_x, minimap_y = utils.buf_to_minimap(cursor[2] + 1, cursor[1])
 
   minimap_x = minimap_x + 2 - 1
