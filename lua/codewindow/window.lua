@@ -208,9 +208,10 @@ local function should_ignore(current_window)
   local bufnr = win_info[1].bufnr
 
   ---@type string
-  local buftype = api.nvim_buf_get_option(bufnr, "buftype")
+  -- local buftype = api.nvim_buf_get_option(bufnr, "buftype")
+  local buftype = api.nvim_get_option_value("buftype", { buf = bufnr })
   ---@type string
-  local filetype = api.nvim_buf_get_option(bufnr, "filetype")
+  local filetype = api.nvim_get_option_value("filetype", { buf = bufnr })
 
   if vim.tbl_contains(config.exclude_buftypes, buftype) then
     return true
@@ -260,11 +261,15 @@ function M.create_window(buffer, on_switch_window, on_cursor_move)
   else
     local minimap_buf = api.nvim_create_buf(false, true)
     api.nvim_buf_set_name(minimap_buf, "CodeWindow")
-    api.nvim_buf_set_option(minimap_buf, "filetype", "Codewindow")
+    api.nvim_set_option_value("filetype", "Codewindow", { buf = minimap_buf })
 
     local minimap_win = api.nvim_open_win(minimap_buf, false, get_window_config(current_window))
 
-    api.nvim_win_set_option(minimap_win, "winhl", "Normal:CodewindowBackground,FloatBorder:CodewindowBorder")
+    api.nvim_set_option_value(
+      "winhl",
+      "Normal:CodewindowBackground,FloatBorder:CodewindowBorder",
+      { win = minimap_win }
+    )
 
     window = {
       buffer = minimap_buf,

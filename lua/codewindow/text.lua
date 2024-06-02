@@ -66,7 +66,7 @@ function M.update_minimap(current_buffer, window)
   end
   local config = require("codewindow.config").get()
 
-  api.nvim_buf_set_option(window.buffer, "modifiable", true)
+  api.nvim_set_option_value("modifiable", true, { buf = window.buffer })
   local lines = api.nvim_buf_get_lines(current_buffer, 0, -1, true)
 
   local minimap_text = compress_text(lines)
@@ -103,7 +103,7 @@ function M.update_minimap(current_buffer, window)
   end
 
   minimap_hl.display_screen_bounds(window)
-  api.nvim_buf_set_option(window.buffer, "modifiable", false)
+  api.nvim_set_option_value("modifiable", false, { buf = window.buffer })
 end
 
 return M
