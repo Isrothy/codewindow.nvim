@@ -52,38 +52,18 @@ function M.apply_default_keybinds()
   vim.keymap.set("n", "<leader>mm", M.toggle_minimap, { desc = "Toggle minimap" })
 end
 
-function M.setup(config)
-  config = require("codewindow.config").setup(config)
-
+function M.setup()
   minimap_hl.setup()
 
   api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
     callback = function()
-      local filetype = vim.bo.filetype
-      local should_open = false
-      if type(config.auto_enable) == "boolean" then
-        should_open = config.auto_enable
-      else
-        for _, v in ipairs(config.auto_enable) do
-          if v == filetype then
-            should_open = true
-          end
-        end
-      end
+      local config = require("codewindow.config").get()
 
-      if config.max_lines then
-        if api.nvim_buf_line_count(api.nvim_get_current_buf()) > config.max_lines then
-          should_open = false
-        end
-      end
-
-      if vim.bo.buftype == "terminal" and not config.active_in_terminals then
+      if not config.auto_enable then
         return
       end
 
-      if should_open then
-        defer(M.open_minimap)
-      end
+      defer(M.open_minimap)
     end,
   })
 end

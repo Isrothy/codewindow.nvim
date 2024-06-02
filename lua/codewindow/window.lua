@@ -3,7 +3,7 @@ local M = {}
 local utils = require("codewindow.utils")
 local minimap_txt = require("codewindow.text")
 local minimap_hl = require("codewindow.highlight")
-local config = require("codewindow.config").get()
+-- local config = require("codewindow.config").get()
 local window = nil
 
 local api = vim.api
@@ -73,6 +73,7 @@ end
 
 local function get_window_config(current_window)
   local minimap_height = get_window_height(current_window)
+  local config = require("codewindow.config").get()
   if config.max_minimap_height then
     minimap_height = math.min(minimap_height, config.max_minimap_height)
   end
@@ -117,6 +118,7 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
     end,
     group = augroup,
   })
+  local config = require("codewindow.config").get()
   api.nvim_create_autocmd(config.events, {
     buffer = parent_buf,
     callback = function()
@@ -199,21 +201,27 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
   end
 end
 
+---@return boolean
 local function should_ignore(current_window)
+  local config = require("codewindow.config").get()
   local win_info = vim.fn.getwininfo(current_window)
-  if not config.active_in_terminals and win_info[1].terminal == 1 then
+  local bufnr = win_info[1].bufnr
+
+  ---@type string
+  local buftype = api.nvim_buf_get_option(bufnr, "buftype")
+  ---@type string
+  local filetype = api.nvim_buf_get_option(bufnr, "filetype")
+
+  if vim.tbl_contains(config.exclude_buftypes, buftype) then
+    return true
+  end
+  if vim.tbl_contains(config.exclude_filetypes, filetype) then
+    return true
+  end
+  if config.max_lines and api.nvim_buf_line_count(bufnr) > config.max_lines then
     return true
   end
 
-  if vim.bo.buftype ~= "" then
-    return true
-  end
-  local filetype = vim.bo.filetype
-  for _, v in ipairs(config.exclude_filetypes) do
-    if v == filetype then
-      return true
-    end
-  end
   return false
 end
 
