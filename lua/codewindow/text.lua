@@ -1,7 +1,7 @@
 local M = {}
 
 local minimap_hl = require("codewindow.highlight")
-local minimap_err = require("codewindow.errors")
+local minimap_diagnostics = require("codewindow.diagnostics")
 local utils = require("codewindow.utils")
 
 local api = vim.api
@@ -87,7 +87,7 @@ function M.update_minimap(current_buffer, window)
   ---@type (string[])?
   local error_text
   if config.use_lsp then
-    error_text = minimap_err.get_lsp_errors(current_buffer)
+    error_text = minimap_diagnostics.get_lsp_diagnostics(current_buffer)
   else
     error_text = {}
   end
@@ -107,8 +107,16 @@ function M.update_minimap(current_buffer, window)
   api.nvim_buf_set_lines(window.buffer, 0, -1, true, text)
 
   if config.use_treesitter then
-    local highlights = minimap_hl.extract_ts_highlighting(current_buffer, lines)
-    minimap_hl.apply_ts_highlight(highlights, window.buffer, lines)
+    local highlights = minimap_hl.extract_ts_highlights(current_buffer, lines)
+    minimap_hl.apply_ts_highlights(highlights, window.buffer, lines)
+  end
+
+  if config.use_lsp then
+    minimap_hl.apply_diagnostics_highlights(window.buffer, lines)
+  end
+
+  if config.use_git then
+    minimap_hl.apply_git_highlights(window.buffer, lines)
   end
 
   if config.show_cursor then

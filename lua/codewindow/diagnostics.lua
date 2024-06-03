@@ -4,15 +4,15 @@ local diagnostic = vim.diagnostic
 
 ---@param buffer integer
 ---@return string[]
-function M.get_lsp_errors(buffer)
+function M.get_lsp_diagnostics(buffer)
   local lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, true)
   local error_lines = {}
   for _ = 1, #lines do
     table.insert(error_lines, { warn = false, err = false })
   end
 
-  local errors = diagnostic.get(buffer, { severity = { min = diagnostic.severity.WARN } })
-  for _, v in ipairs(errors) do
+  local diagnostics = diagnostic.get(buffer, { severity = { min = diagnostic.severity.WARN } })
+  for _, v in ipairs(diagnostics) do
     if v.severity == diagnostic.severity.WARN then
       if v.lnum + 1 <= #error_lines then
         error_lines[v.lnum + 1].warn = true
@@ -24,7 +24,7 @@ function M.get_lsp_errors(buffer)
     end
   end
 
-  local error_text = {}
+  local text = {}
   for i = 1, #error_lines + 3, 4 do
     local err_flag = 0
     local warn_flag = 0
@@ -46,10 +46,10 @@ function M.get_lsp_errors(buffer)
     local err_char = utils.flag_to_char(err_flag)
     local warn_char = utils.flag_to_char(warn_flag)
 
-    table.insert(error_text, err_char .. warn_char)
+    table.insert(text, err_char .. warn_char)
   end
 
-  return error_text
+  return text
 end
 
 return M

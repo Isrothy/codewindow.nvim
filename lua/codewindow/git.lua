@@ -41,7 +41,7 @@ function M.parse_git_diff(lines)
   end
 
   ---@type string[]
-  local git_lines = {}
+  local text = {}
   local minimap_height = math.ceil(#lines / 4)
   for y = 1, minimap_height do
     local a_flag = 0
@@ -60,10 +60,10 @@ function M.parse_git_diff(lines)
     local a_chr = utils.flag_to_char(a_flag)
     local d_chr = utils.flag_to_char(d_flag)
 
-    git_lines[y] = a_chr .. d_chr
+    text[y] = a_chr .. d_chr
   end
 
-  return git_lines
+  return text
 end
 
 return M

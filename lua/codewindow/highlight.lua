@@ -42,7 +42,7 @@ end
 ---@param buffer integer
 ---@param lines string[]
 ---@return string[][][]?
-M.extract_ts_highlighting = function(buffer, lines)
+M.extract_ts_highlights = function(buffer, lines)
   local config = require("codewindow.config").get()
   if not api.nvim_buf_is_valid(buffer) then
     return nil
@@ -127,7 +127,7 @@ end
 ---@param highlights string[][][]?
 ---@param buffer integer
 ---@param lines string[]
-function M.apply_ts_highlight(highlights, buffer, lines)
+function M.apply_ts_highlights(highlights, buffer, lines)
   local config = require("codewindow.config").get()
   local namespaces = require("codewindow.namespace")
   local minimap_height = math.ceil(#lines / 4)
@@ -164,21 +164,31 @@ function M.apply_ts_highlight(highlights, buffer, lines)
       end
     end
   end
+end
 
+---@param buffer integer
+---@param lines string[]
+function M.apply_diagnostics_highlights(buffer, lines)
+  local diagnostic_namespace = require("codewindow.namespace").diagnostic
+  api.nvim_buf_clear_namespace(buffer, diagnostic_namespace, 0, -1)
+  local minimap_height = math.ceil(#lines / 4)
   for y = 1, minimap_height do
-    api.nvim_buf_add_highlight(buffer, namespaces.diagnostic, "CodewindowError", y - 1, 0, 3)
-    api.nvim_buf_add_highlight(buffer, namespaces.diagnostic, "CodewindowWarn", y - 1, 3, 6)
+    api.nvim_buf_add_highlight(buffer, diagnostic_namespace, "CodewindowError", y - 1, 0, 3)
+    api.nvim_buf_add_highlight(buffer, diagnostic_namespace, "CodewindowWarn", y - 1, 3, 6)
+  end
+end
 
-    local git_start = 6 + 3 * config.minimap_width
-    highlight_range(buffer, namespaces.git, "CodewindowAddition", { y - 1, git_start }, { y - 1, git_start + 3 }, {})
-    highlight_range(
-      buffer,
-      namespaces.git,
-      "CodewindowDeletion",
-      { y - 1, git_start + 3 },
-      { y - 1, git_start + 6 },
-      {}
-    )
+---@param buffer integer
+---@param lines string[]
+function M.apply_git_highlights(buffer, lines)
+  local config = require("codewindow.config").get()
+  local git_namespace = require("codewindow.namespace").git
+  api.nvim_buf_clear_namespace(buffer, git_namespace, 0, -1)
+  local minimap_height = math.ceil(#lines / 4)
+  local git_start = 6 + 3 * config.minimap_width
+  for y = 1, minimap_height do
+    highlight_range(buffer, git_namespace, "CodewindowAddition", { y - 1, git_start }, { y - 1, git_start + 3 }, {})
+    highlight_range(buffer, git_namespace, "CodewindowDeletion", { y - 1, git_start + 3 }, { y - 1, git_start + 6 }, {})
   end
 end
 
