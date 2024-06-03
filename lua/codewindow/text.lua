@@ -106,8 +106,10 @@ function M.update_minimap(current_buffer, window)
 
   api.nvim_buf_set_lines(window.buffer, 0, -1, true, text)
 
-  local highlights = minimap_hl.extract_highlighting(current_buffer, lines)
-  minimap_hl.apply_highlight(highlights, window.buffer, lines)
+  if config.use_treesitter then
+    local highlights = minimap_hl.extract_ts_highlighting(current_buffer, lines)
+    minimap_hl.apply_ts_highlight(highlights, window.buffer, lines)
+  end
 
   if config.show_cursor then
     minimap_hl.display_cursor(window)

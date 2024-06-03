@@ -1,7 +1,5 @@
 local M = {}
 
-local config = require("codewindow.config").get()
-
 local api = vim.api
 local highlight_range = vim.highlight.range
 
@@ -38,10 +36,14 @@ local function most_commons(tbl)
   return result
 end
 
+---Extracts the highlighting from the given buffer using treesitter.
+---For any codepoint, the most common group will be chosen.
+---If there are multiple groups with the same number of occurrences, all will be chosen.
 ---@param buffer integer
 ---@param lines string[]
 ---@return string[][][]?
-local function extract_highlighting(buffer, lines)
+M.extract_ts_highlighting = function(buffer, lines)
+  local config = require("codewindow.config").get()
   if not api.nvim_buf_is_valid(buffer) then
     return nil
   end
@@ -52,7 +54,6 @@ local function extract_highlighting(buffer, lines)
   if buf_highlighter == nil then
     return nil
   end
-
   local line_count = #lines
   local minimap_width = config.minimap_width
   local minimap_height = math.ceil(line_count / 4)
@@ -108,16 +109,11 @@ local function extract_highlighting(buffer, lines)
   return highlights
 end
 
----@type fun(buffer: integer, lines:string[]): string[][][]?
-M.extract_highlighting = config.use_treesitter and extract_highlighting or function()
-  return nil
-end
-
 ---The index of an item in a list
 ---@param list any[]
 ---@param item any
 ---@return integer?
-local function index(list, item)
+local function index_of(list, item)
   for i, v in ipairs(list) do
     if v == item then
       return i
@@ -126,10 +122,13 @@ local function index(list, item)
   return nil
 end
 
+--- Applies the given highlights to the given buffer.
+--- If there are multiple highlights for the same position, all of them will be applied.
 ---@param highlights string[][][]?
 ---@param buffer integer
 ---@param lines string[]
-function M.apply_highlight(highlights, buffer, lines)
+function M.apply_ts_highlight(highlights, buffer, lines)
+  local config = require("codewindow.config").get()
   local namespaces = require("codewindow.namespace")
   local minimap_height = math.ceil(#lines / 4)
   local minimap_width = config.minimap_width
@@ -142,9 +141,10 @@ function M.apply_highlight(highlights, buffer, lines)
       for x = 1, minimap_width do
         for _, group in ipairs(highlights[y][x]) do
           if group ~= "" then
+            -- For performance reasons, consecutive highlights are merged into one.
             local end_x = x
             while end_x < minimap_width do
-              local pos = index(highlights[y][end_x + 1], group)
+              local pos = index_of(highlights[y][end_x + 1], group)
               if not pos then
                 break
               end
@@ -184,6 +184,7 @@ end
 
 ---@param window Window?
 function M.display_screen_bounds(window)
+  local config = require("codewindow.config").get()
   local screenbounds_namespaces = require("codewindow.namespace").screenbounds
   api.nvim_buf_clear_namespace(window.buffer, screenbounds_namespaces, 0, -1)
 
@@ -249,10 +250,6 @@ end
 
 ---@param window Window?
 function M.display_cursor(window)
-  if not config.show_cursor then
-    return
-  end
-
   local cursor_namespace = require("codewindow.namespace").cursor
   if api.nvim_buf_is_valid(window.buffer) then
     api.nvim_buf_clear_namespace(window.buffer, cursor_namespace, 0, -1)
