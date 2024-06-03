@@ -2,24 +2,10 @@ local M = {}
 
 local config = require("codewindow.config").get()
 
----@type integer?
-local hl_namespace
----@type integer?
-local screenbounds_namespace
----@type integer?
-local diagnostic_namespace
----@type integer?
-local cursor_namespace
-
 local api = vim.api
 local highlight_range = vim.highlight.range
 
 function M.setup()
-  hl_namespace = api.nvim_create_namespace("codewindow.highlight")
-  screenbounds_namespace = api.nvim_create_namespace("codewindow.screenbounds")
-  diagnostic_namespace = api.nvim_create_namespace("codewindow.diagnostic")
-  cursor_namespace = api.nvim_create_namespace("codewindow.cursor")
-
   api.nvim_set_hl(0, "CodewindowBackground", { link = "Normal", default = true })
   api.nvim_set_hl(0, "CodewindowBorder", { fg = "#ffffff", default = true })
   api.nvim_set_hl(0, "CodewindowWarn", { link = "DiagnosticSignWarn", default = true })
@@ -28,13 +14,6 @@ function M.setup()
   api.nvim_set_hl(0, "CodewindowDeletion", { fg = "#fc4c4c", default = true })
   api.nvim_set_hl(0, "CodewindowUnderline", { underline = true, sp = "#ffffff", default = true })
   api.nvim_set_hl(0, "CodewindowBoundsBackground", { link = "CursorLine", default = true })
-end
-
----@param buffer integer
-local function clear_hl_namespaces(buffer)
-  api.nvim_buf_clear_namespace(buffer, hl_namespace, 0, -1)
-  api.nvim_buf_clear_namespace(buffer, screenbounds_namespace, 0, -1)
-  api.nvim_buf_clear_namespace(buffer, diagnostic_namespace, 0, -1)
 end
 
 ---The most common elements in the given table
@@ -151,11 +130,13 @@ end
 ---@param buffer integer
 ---@param lines string[]
 function M.apply_highlight(highlights, buffer, lines)
+  local namespaces = require("codewindow.namespace")
   local minimap_height = math.ceil(#lines / 4)
   local minimap_width = config.minimap_width
 
-  clear_hl_namespaces(buffer)
-
+  api.nvim_buf_clear_namespace(buffer, namespaces.treesitter, 0, -1)
+  api.nvim_buf_clear_namespace(buffer, namespaces.git, 0, -1)
+  api.nvim_buf_clear_namespace(buffer, namespaces.diagnostic, 0, -1)
   if highlights ~= nil then
     for y = 1, minimap_height do
       for x = 1, minimap_width do
@@ -170,7 +151,14 @@ function M.apply_highlight(highlights, buffer, lines)
               end_x = end_x + 1
               highlights[y][x][pos] = ""
             end
-            api.nvim_buf_add_highlight(buffer, hl_namespace, "@" .. group, y - 1, (x - 1) * 3 + 6, end_x * 3 + 6)
+            api.nvim_buf_add_highlight(
+              buffer,
+              namespaces.treesitter,
+              "@" .. group,
+              y - 1,
+              (x - 1) * 3 + 6,
+              end_x * 3 + 6
+            )
           end
         end
       end
@@ -178,21 +166,14 @@ function M.apply_highlight(highlights, buffer, lines)
   end
 
   for y = 1, minimap_height do
-    api.nvim_buf_add_highlight(buffer, diagnostic_namespace, "CodewindowError", y - 1, 0, 3)
-    api.nvim_buf_add_highlight(buffer, diagnostic_namespace, "CodewindowWarn", y - 1, 3, 6)
+    api.nvim_buf_add_highlight(buffer, namespaces.diagnostic, "CodewindowError", y - 1, 0, 3)
+    api.nvim_buf_add_highlight(buffer, namespaces.diagnostic, "CodewindowWarn", y - 1, 3, 6)
 
     local git_start = 6 + 3 * config.minimap_width
+    highlight_range(buffer, namespaces.git, "CodewindowAddition", { y - 1, git_start }, { y - 1, git_start + 3 }, {})
     highlight_range(
       buffer,
-      diagnostic_namespace,
-      "CodewindowAddition",
-      { y - 1, git_start },
-      { y - 1, git_start + 3 },
-      {}
-    )
-    highlight_range(
-      buffer,
-      diagnostic_namespace,
+      namespaces.git,
       "CodewindowDeletion",
       { y - 1, git_start + 3 },
       { y - 1, git_start + 6 },
@@ -203,10 +184,8 @@ end
 
 ---@param window Window?
 function M.display_screen_bounds(window)
-  if screenbounds_namespace == nil then
-    return
-  end
-  api.nvim_buf_clear_namespace(window.buffer, screenbounds_namespace, 0, -1)
+  local screenbounds_namespaces = require("codewindow.namespace").screenbounds
+  api.nvim_buf_clear_namespace(window.buffer, screenbounds_namespaces, 0, -1)
 
   local utils = require("codewindow.utils")
   local topline = utils.get_top_line(window.parent_win)
@@ -219,7 +198,7 @@ function M.display_screen_bounds(window)
   if top_y > 0 and config.screen_bounds == "lines" then
     api.nvim_buf_add_highlight(
       window.buffer,
-      screenbounds_namespace,
+      screenbounds_namespaces,
       "CodewindowUnderline",
       top_y - 1,
       6,
@@ -241,7 +220,7 @@ function M.display_screen_bounds(window)
   if config.screen_bounds == "lines" then
     api.nvim_buf_add_highlight(
       window.buffer,
-      screenbounds_namespace,
+      screenbounds_namespaces,
       "CodewindowUnderline",
       bot_y,
       6,
@@ -253,7 +232,7 @@ function M.display_screen_bounds(window)
     for y = top_y, bot_y do
       api.nvim_buf_add_highlight(
         window.buffer,
-        screenbounds_namespace,
+        screenbounds_namespaces,
         "CodewindowBoundsBackground",
         y,
         6,
@@ -274,6 +253,7 @@ function M.display_cursor(window)
     return
   end
 
+  local cursor_namespace = require("codewindow.namespace").cursor
   if api.nvim_buf_is_valid(window.buffer) then
     api.nvim_buf_clear_namespace(window.buffer, cursor_namespace, 0, -1)
   end
