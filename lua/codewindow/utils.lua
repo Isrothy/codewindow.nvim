@@ -51,17 +51,17 @@ function M.get_bot_line(window)
 end
 
 --- Scroll the window by the given amount
----@param window integer
+---@param winid integer
 ---@param amount integer
-function M.scroll_window(window, amount)
-  if not api.nvim_win_is_valid(window) then
+function M.scroll_window(winid, amount)
+  if not api.nvim_win_is_valid(winid) then
     return
   end
 
-  api.nvim_win_call(window, function()
+  api.nvim_win_call(winid, function()
     if amount > 0 then
-      local botline = M.get_bot_line(window)
-      local buffer = api.nvim_win_get_buf(window)
+      local botline = M.get_bot_line(winid)
+      local buffer = api.nvim_win_get_buf(winid)
       local height = api.nvim_buf_line_count(buffer)
       if botline >= height then
         return
@@ -70,7 +70,7 @@ function M.scroll_window(window, amount)
       exe(string.format("\"normal! %d\\<C-e>\"", max_move_down))
     else
       amount = -amount
-      local topline = M.get_top_line(window)
+      local topline = M.get_top_line(winid)
       if topline <= 1 then
         return
       end

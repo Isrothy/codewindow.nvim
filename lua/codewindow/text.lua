@@ -120,10 +120,10 @@ function M.update_minimap(current_buffer, window)
   end
 
   if config.show_cursor then
-    minimap_hl.display_cursor(window)
+    minimap_hl.display_cursor(window.parent_win, window.window)
   end
 
-  minimap_hl.display_screen_bounds(window)
+  minimap_hl.display_screen_bounds(window.parent_win, window.window)
   api.nvim_set_option_value("modifiable", false, { buf = window.buffer })
 end
 

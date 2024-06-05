@@ -192,15 +192,17 @@ function M.apply_git_highlights(buffer, lines)
   end
 end
 
----@param window Window?
-function M.display_screen_bounds(window)
+---@param winid integer
+---@param mwinid integer
+function M.display_screen_bounds(winid, mwinid)
+  local bufnr = api.nvim_win_get_buf(mwinid)
   local config = require("codewindow.config").get()
   local screenbounds_namespaces = require("codewindow.namespace").screenbounds
-  api.nvim_buf_clear_namespace(window.buffer, screenbounds_namespaces, 0, -1)
+  api.nvim_buf_clear_namespace(bufnr, screenbounds_namespaces, 0, -1)
 
   local utils = require("codewindow.utils")
-  local topline = utils.get_top_line(window.parent_win)
-  local botline = utils.get_bot_line(window.parent_win)
+  local topline = utils.get_top_line(winid)
+  local botline = utils.get_bot_line(winid)
 
   local difference = math.ceil((botline - topline) / 4) + 1
 
@@ -208,7 +210,7 @@ function M.display_screen_bounds(window)
 
   if top_y > 0 and config.screen_bounds == "lines" then
     api.nvim_buf_add_highlight(
-      window.buffer,
+      bufnr,
       screenbounds_namespaces,
       "CodewindowUnderline",
       top_y - 1,
@@ -218,7 +220,7 @@ function M.display_screen_bounds(window)
   end
 
   local bot_y = top_y + difference - 1
-  local buf_height = api.nvim_buf_line_count(window.buffer)
+  local buf_height = api.nvim_buf_line_count(bufnr)
 
   if bot_y > buf_height - 1 then
     bot_y = buf_height - 1
@@ -230,7 +232,7 @@ function M.display_screen_bounds(window)
 
   if config.screen_bounds == "lines" then
     api.nvim_buf_add_highlight(
-      window.buffer,
+      bufnr,
       screenbounds_namespaces,
       "CodewindowUnderline",
       bot_y,
@@ -242,7 +244,7 @@ function M.display_screen_bounds(window)
   if config.screen_bounds == "background" then
     for y = top_y, bot_y do
       api.nvim_buf_add_highlight(
-        window.buffer,
+        bufnr,
         screenbounds_namespaces,
         "CodewindowBoundsBackground",
         y,
@@ -253,21 +255,23 @@ function M.display_screen_bounds(window)
   end
 
   local center = math.floor((top_y + bot_y) / 2) + 1
-  if api.nvim_win_is_valid(window.window) then
-    api.nvim_win_set_cursor(window.window, { center, 0 })
+  if api.nvim_win_is_valid(mwinid) then
+    api.nvim_win_set_cursor(mwinid, { center, 0 })
   end
 end
 
----@param window Window?
-function M.display_cursor(window)
+---@param winid integer
+---@param mwinid integer
+function M.display_cursor( winid, mwinid)
   local cursor_namespace = require("codewindow.namespace").cursor
-  if api.nvim_buf_is_valid(window.buffer) then
-    api.nvim_buf_clear_namespace(window.buffer, cursor_namespace, 0, -1)
+  local bufnr = api.nvim_win_get_buf(mwinid)
+  if api.nvim_buf_is_valid(bufnr) then
+    api.nvim_buf_clear_namespace(bufnr, cursor_namespace, 0, -1)
   end
-  if not api.nvim_win_is_valid(window.parent_win) then
+  if not api.nvim_win_is_valid(winid) then
     return
   end
-  local cursor = api.nvim_win_get_cursor(window.parent_win)
+  local cursor = api.nvim_win_get_cursor(winid)
 
   local utils = require("codewindow.utils")
   local minimap_x, minimap_y = utils.buf_to_minimap(cursor[2] + 1, cursor[1])
@@ -275,8 +279,8 @@ function M.display_cursor(window)
   minimap_x = minimap_x + 2 - 1
   minimap_y = minimap_y - 1
 
-  if api.nvim_buf_is_valid(window.buffer) then
-    api.nvim_buf_add_highlight(window.buffer, cursor_namespace, "Cursor", minimap_y, minimap_x * 3, minimap_x * 3 + 3)
+  if api.nvim_buf_is_valid(bufnr) then
+    api.nvim_buf_add_highlight(bufnr, cursor_namespace, "Cursor", minimap_y, minimap_x * 3, minimap_x * 3 + 3)
   end
 end
 

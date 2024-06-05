@@ -14,7 +14,10 @@ function M.open_minimap()
     defer(M.open_minimap)
   end, function()
     defer(function()
-      minimap_hl.display_cursor(window)
+      local config = require("codewindow.config").get()
+      if config.show_cursor then
+        minimap_hl.display_cursor(window.parent_win, window.window)
+      end
     end)
   end)
 

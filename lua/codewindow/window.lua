@@ -16,17 +16,19 @@ local window = nil
 local api = vim.api
 local defer = vim.schedule
 
-local function center_minimap()
-  local topline = utils.get_top_line(window.parent_win)
-  local botline = utils.get_bot_line(window.parent_win)
+---@param winid integer window id of the window that the minimap is attached to
+---@param mwinid integer window id of the minimap
+local function center_minimap(winid, mwinid)
+  local topline = utils.get_top_line(winid)
+  local botline = utils.get_bot_line(winid)
 
   local difference = math.ceil((botline - topline) / 4)
 
   local top_y = math.floor(topline / 4)
   local bot_y = top_y + difference - 1
 
-  local minimap_top = utils.get_top_line(window.window)
-  local minimap_bot = utils.get_bot_line(window.window)
+  local minimap_top = utils.get_top_line(mwinid)
+  local minimap_bot = utils.get_bot_line(mwinid)
 
   local top_diff = top_y - minimap_top
   local bot_diff = minimap_bot - bot_y
@@ -41,24 +43,29 @@ local function center_minimap()
     diff = math.floor(diff / 2)
   end
 
-  utils.scroll_window(window.window, diff)
+  utils.scroll_window(mwinid, diff)
 end
 
-local function display_screen_bounds()
-  local ok = pcall(minimap_hl.display_screen_bounds, window)
+---@param winid integer
+---@param mwinid integer
+local function display_screen_bounds(winid, mwinid)
+  local ok = window and pcall(minimap_hl.display_screen_bounds, winid, mwinid) or false
   if not ok then
     defer(function()
-      minimap_txt.update_minimap(api.nvim_win_get_buf(window.parent_win), window)
-      minimap_hl.display_screen_bounds(window)
+      minimap_txt.update_minimap(api.nvim_win_get_buf(winid), window)
+      minimap_hl.display_screen_bounds(winid, mwinid)
     end)
   end
 end
 
-local function scroll_parent_window(amount)
-  utils.scroll_window(window.parent_win, amount)
-  center_minimap()
+---@param winid integer
+---@param mwinid integer
+---@param amount integer
+local function scroll_parent_window(winid, mwinid, amount)
+  utils.scroll_window(winid, amount)
+  center_minimap(winid, mwinid)
 
-  display_screen_bounds()
+  display_screen_bounds(winid, mwinid)
 end
 
 local augroup
@@ -73,9 +80,9 @@ function M.close_minimap()
   window = nil
 end
 
----@param current_window integer
-local function get_window_config(current_window)
-  local minimap_height = vim.fn.winheight(current_window)
+---@param winid integer
+local function get_window_config(winid)
+  local minimap_height = vim.fn.winheight(winid)
   local config = require("codewindow.config").get()
   if config.max_minimap_height then
     minimap_height = math.min(minimap_height, config.max_minimap_height)
@@ -83,8 +90,8 @@ local function get_window_config(current_window)
 
   local relative = config.relative
   local is_relative = config.relative == "win"
-  local win = is_relative and current_window or nil
-  local col = is_relative and api.nvim_win_get_width(current_window) or vim.o.columns - 1
+  local win = is_relative and winid or nil
+  local col = is_relative and api.nvim_win_get_width(winid) or vim.o.columns - 1
   local row = (not is_relative and vim.o.showtabline > 0) and 1 or 0
 
   local height = (function()
@@ -131,8 +138,8 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
     buffer = parent_buf,
     callback = function()
       defer(function()
-        center_minimap()
-        display_screen_bounds()
+        center_minimap(window.parent_win, window.window)
+        display_screen_bounds(window.parent_win, window.window)
         if api.nvim_win_is_valid(window.window) then
           api.nvim_win_set_config(window.window, get_window_config(window.parent_win))
         end
@@ -210,7 +217,7 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
         local center = math.floor((topline + botline) / 2 / 4)
         local row = api.nvim_win_get_cursor(window.window)[1] - 1
         local diff = row - center
-        scroll_parent_window(diff * 4)
+        scroll_parent_window(window.parent_win, window.window, diff * 4)
       end,
       group = augroup,
     })
@@ -223,11 +230,11 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
   end
 end
 
----@param current_window integer
+---@param winid integer
 ---@return boolean
-local function should_ignore(current_window)
+local function should_ignore(winid)
   local config = require("codewindow.config").get()
-  local win_info = vim.fn.getwininfo(current_window)
+  local win_info = vim.fn.getwininfo(winid)
   local bufnr = win_info[1].bufnr
 
   ---@type string
@@ -248,11 +255,11 @@ local function should_ignore(current_window)
   return false
 end
 
----@param buffer integer
+---@param bufnr integer
 ---@param on_switch_window function
 ---@param on_cursor_move function
 ---@return Window?
-function M.create_window(buffer, on_switch_window, on_cursor_move)
+function M.create_window(bufnr, on_switch_window, on_cursor_move)
   local current_window = api.nvim_get_current_win()
 
   if should_ignore(current_window) then
@@ -308,7 +315,7 @@ function M.create_window(buffer, on_switch_window, on_cursor_move)
   if augroup then
     api.nvim_clear_autocmds({ group = augroup })
   end
-  setup_minimap_autocmds(buffer, on_switch_window, on_cursor_move)
+  setup_minimap_autocmds(bufnr, on_switch_window, on_cursor_move)
 
   return window
 end
@@ -335,7 +342,7 @@ end
 
 ---@param amount integer
 function M.scroll_minimap(amount)
-  scroll_parent_window(4 * amount)
+  scroll_parent_window(window.parent_win, window.window, 4 * amount)
   utils.scroll_window(window.window, amount)
 end
 
@@ -344,17 +351,17 @@ function M.scroll_minimap_by_page(amount)
   local window_height = api.nvim_win_get_height(window.parent_win)
   local actual_amount = math.floor(window_height * amount)
   actual_amount = actual_amount + (4 - actual_amount % 4) % 4
-  scroll_parent_window(actual_amount)
+  scroll_parent_window(window.parent_win, window.window, actual_amount)
   utils.scroll_window(window.window, actual_amount / 4)
 end
 
 function M.scroll_minimap_top()
-  scroll_parent_window(-math.huge)
+  scroll_parent_window(window.parent_win, window.window, -math.huge)
   utils.scroll_window(window.window, -math.huge)
 end
 
 function M.scroll_minimap_bot()
-  scroll_parent_window(math.huge)
+  scroll_parent_window(window.parent_win, window.window, math.huge)
   utils.scroll_window(window.window, math.huge)
 end
 
