@@ -68,15 +68,18 @@ local function compress_text(lines)
   return minimap_text
 end
 
----@param current_buffer integer?
-function M.update_minimap(current_buffer, window)
-  if not current_buffer or not api.nvim_buf_is_valid(current_buffer) then
+---@param winid integer
+---@param mwinid integer
+function M.update_minimap(winid, mwinid)
+  local bufnr = api.nvim_win_get_buf(winid)
+  if not bufnr or not api.nvim_buf_is_valid(bufnr) then
     return
   end
   local config = require("codewindow.config").get()
+  local mbufnr = api.nvim_win_get_buf(mwinid)
 
-  api.nvim_set_option_value("modifiable", true, { buf = window.buffer })
-  local lines = api.nvim_buf_get_lines(current_buffer, 0, -1, true)
+  api.nvim_set_option_value("modifiable", true, { buf = mbufnr })
+  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, true)
 
   local minimap_text = compress_text(lines)
 
@@ -87,7 +90,7 @@ function M.update_minimap(current_buffer, window)
   ---@type (string[])?
   local error_text
   if config.use_lsp then
-    error_text = minimap_diagnostics.get_lsp_diagnostics(current_buffer)
+    error_text = minimap_diagnostics.get_lsp_diagnostics(bufnr)
   else
     error_text = {}
   end
@@ -104,27 +107,27 @@ function M.update_minimap(current_buffer, window)
     text[i] = line
   end
 
-  api.nvim_buf_set_lines(window.buffer, 0, -1, true, text)
+  api.nvim_buf_set_lines(mbufnr, 0, -1, true, text)
 
   if config.use_treesitter then
-    local highlights = minimap_hl.extract_ts_highlights(current_buffer, lines)
-    minimap_hl.apply_ts_highlights(highlights, window.buffer, lines)
+    local highlights = minimap_hl.extract_ts_highlights(bufnr, lines)
+    minimap_hl.apply_ts_highlights(highlights, mwinid, lines)
   end
 
   if config.use_lsp then
-    minimap_hl.apply_diagnostics_highlights(window.buffer, lines)
+    minimap_hl.apply_diagnostics_highlights(mwinid, lines)
   end
 
   if config.use_git then
-    minimap_hl.apply_git_highlights(window.buffer, lines)
+    minimap_hl.apply_git_highlights(mwinid, lines)
   end
 
   if config.show_cursor then
-    minimap_hl.display_cursor(window.parent_win, window.window)
+    minimap_hl.display_cursor(bufnr, mwinid)
   end
 
-  minimap_hl.display_screen_bounds(window.parent_win, window.window)
-  api.nvim_set_option_value("modifiable", false, { buf = window.buffer })
+  minimap_hl.display_screen_bounds(bufnr, mwinid)
+  api.nvim_set_option_value("modifiable", false, { buf = mbufnr })
 end
 
 return M

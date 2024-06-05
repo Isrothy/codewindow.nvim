@@ -7,10 +7,10 @@ function M.open_minimap()
   local minimap_txt = require("codewindow.text")
   local minimap_win = require("codewindow.window")
   local minimap_hl = require("codewindow.highlight")
-  local current_buffer = api.nvim_get_current_buf()
+  local current_window = api.nvim_get_current_win()
   ---@type Window?
   local window
-  window = minimap_win.create_window(current_buffer, function()
+  window = minimap_win.create_window(current_window, function()
     defer(M.open_minimap)
   end, function()
     defer(function()
@@ -25,7 +25,7 @@ function M.open_minimap()
     return
   end
 
-  minimap_txt.update_minimap(current_buffer, window)
+  minimap_txt.update_minimap(current_window, window.window)
 end
 
 function M.close_minimap()

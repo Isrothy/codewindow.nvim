@@ -125,14 +125,14 @@ end
 --- Applies the given highlights to the given buffer.
 --- If there are multiple highlights for the same position, all of them will be applied.
 ---@param highlights string[][][]?
----@param buffer integer
+---@param mwinid integer
 ---@param lines string[]
-function M.apply_ts_highlights(highlights, buffer, lines)
+function M.apply_ts_highlights(highlights, mwinid, lines)
   local config = require("codewindow.config").get()
   local namespaces = require("codewindow.namespace")
   local minimap_height = math.ceil(#lines / 4)
   local minimap_width = config.minimap_width
-
+  local buffer = api.nvim_win_get_buf(mwinid)
   api.nvim_buf_clear_namespace(buffer, namespaces.treesitter, 0, -1)
   api.nvim_buf_clear_namespace(buffer, namespaces.git, 0, -1)
   api.nvim_buf_clear_namespace(buffer, namespaces.diagnostic, 0, -1)
@@ -166,29 +166,31 @@ function M.apply_ts_highlights(highlights, buffer, lines)
   end
 end
 
----@param buffer integer
+---@param mwinid integer
 ---@param lines string[]
-function M.apply_diagnostics_highlights(buffer, lines)
+function M.apply_diagnostics_highlights(mwinid, lines)
   local diagnostic_namespace = require("codewindow.namespace").diagnostic
-  api.nvim_buf_clear_namespace(buffer, diagnostic_namespace, 0, -1)
+  local bufnr = api.nvim_win_get_buf(mwinid)
+  api.nvim_buf_clear_namespace(bufnr, diagnostic_namespace, 0, -1)
   local minimap_height = math.ceil(#lines / 4)
   for y = 1, minimap_height do
-    api.nvim_buf_add_highlight(buffer, diagnostic_namespace, "CodewindowError", y - 1, 0, 3)
-    api.nvim_buf_add_highlight(buffer, diagnostic_namespace, "CodewindowWarn", y - 1, 3, 6)
+    api.nvim_buf_add_highlight(bufnr, diagnostic_namespace, "CodewindowError", y - 1, 0, 3)
+    api.nvim_buf_add_highlight(bufnr, diagnostic_namespace, "CodewindowWarn", y - 1, 3, 6)
   end
 end
 
----@param buffer integer
+---@param mwinid integer
 ---@param lines string[]
-function M.apply_git_highlights(buffer, lines)
+function M.apply_git_highlights(mwinid, lines)
   local config = require("codewindow.config").get()
   local git_namespace = require("codewindow.namespace").git
-  api.nvim_buf_clear_namespace(buffer, git_namespace, 0, -1)
+  local bufnr = api.nvim_win_get_buf(mwinid)
+  api.nvim_buf_clear_namespace(bufnr, git_namespace, 0, -1)
   local minimap_height = math.ceil(#lines / 4)
   local git_start = 6 + 3 * config.minimap_width
   for y = 1, minimap_height do
-    highlight_range(buffer, git_namespace, "CodewindowAddition", { y - 1, git_start }, { y - 1, git_start + 3 }, {})
-    highlight_range(buffer, git_namespace, "CodewindowDeletion", { y - 1, git_start + 3 }, { y - 1, git_start + 6 }, {})
+    highlight_range(bufnr, git_namespace, "CodewindowAddition", { y - 1, git_start }, { y - 1, git_start + 3 }, {})
+    highlight_range(bufnr, git_namespace, "CodewindowDeletion", { y - 1, git_start + 3 }, { y - 1, git_start + 6 }, {})
   end
 end
 
@@ -262,7 +264,7 @@ end
 
 ---@param winid integer
 ---@param mwinid integer
-function M.display_cursor( winid, mwinid)
+function M.display_cursor(winid, mwinid)
   local cursor_namespace = require("codewindow.namespace").cursor
   local bufnr = api.nvim_win_get_buf(mwinid)
   if api.nvim_buf_is_valid(bufnr) then

@@ -52,7 +52,7 @@ local function display_screen_bounds(winid, mwinid)
   local ok = window and pcall(minimap_hl.display_screen_bounds, winid, mwinid) or false
   if not ok then
     defer(function()
-      minimap_txt.update_minimap(api.nvim_win_get_buf(winid), window)
+      minimap_txt.update_minimap(winid, window.window)
       minimap_hl.display_screen_bounds(winid, mwinid)
     end)
   end
@@ -152,7 +152,7 @@ local function setup_minimap_autocmds(parent_buf, on_switch_window, on_cursor_mo
     buffer = parent_buf,
     callback = function()
       defer(function()
-        minimap_txt.update_minimap(api.nvim_win_get_buf(window.parent_win), window)
+        minimap_txt.update_minimap(window.parent_win, window.window)
       end)
     end,
     group = augroup,
@@ -255,11 +255,11 @@ local function should_ignore(winid)
   return false
 end
 
----@param bufnr integer
+---@param winid integer
 ---@param on_switch_window function
 ---@param on_cursor_move function
 ---@return Window?
-function M.create_window(bufnr, on_switch_window, on_cursor_move)
+function M.create_window(winid, on_switch_window, on_cursor_move)
   local current_window = api.nvim_get_current_win()
 
   if should_ignore(current_window) then
@@ -315,6 +315,7 @@ function M.create_window(bufnr, on_switch_window, on_cursor_move)
   if augroup then
     api.nvim_clear_autocmds({ group = augroup })
   end
+  local bufnr = api.nvim_win_get_buf(winid)
   setup_minimap_autocmds(bufnr, on_switch_window, on_cursor_move)
 
   return window
